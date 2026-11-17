@@ -1,0 +1,17 @@
+[project]
+name = "finland-weather-aurora"
+version = "1.0.0"
+description = "Geospatial data engineering pipeline: Finnish weather on an H3 grid plus an aurora visibility score"
+requires-python = ">=3.11"
+
+[tool.ruff]
+line-length = 130
+target-version = "py311"
+extend-exclude = ["transform/target", "transform/dbt_packages"]
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP", "SIM"]
+ignore = ["E501"]
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]

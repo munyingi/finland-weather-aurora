@@ -1,0 +1,9 @@
+event_type,metric,operator,threshold,severity,description
+severe_frost,t_min_c,<=,-25,high,Daily minimum at or below -25 °C
+hard_frost,t_min_c,<=,-15,medium,Daily minimum at or below -15 °C
+heat_day,t_max_c,>=,25,medium,Hellepäivä: daily maximum at least 25 °C
+storm,wind_max_ms,>=,21,high,Storm-force 10 min mean wind (FMI scale)
+strong_gusts,gust_max_ms,>=,25,medium,Gusts of 25 m/s or more
+heavy_rain_hour,precip_max_1h_mm,>=,10,medium,10 mm or more in one hour
+heavy_snowfall,snow_increase_cm,>=,10,medium,Snow depth up 10 cm or more within the day
+freeze_thaw,freeze_thaw_flag,>=,1,low,Temperature crossed 0 °C (slippery roads)

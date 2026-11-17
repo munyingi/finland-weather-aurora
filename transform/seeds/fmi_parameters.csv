@@ -1,0 +1,9 @@
+parameter,measure,unit,min_valid,max_valid,description
+t2m,air_temperature_c,°C,-55,40,Air temperature at 2 m
+ws_10min,wind_speed_ms,m/s,0,60,Wind speed (10 min mean)
+wg_10min,wind_gust_ms,m/s,0,80,Wind gust (10 min max)
+r_1h,precipitation_mm,mm,0,80,Precipitation amount (1 h)
+snow_aws,snow_depth_cm,cm,0,300,Snow depth
+n_man,cloud_cover_octas,octas,0,9,Cloud cover (9 = sky obscured)
+rh,relative_humidity_pct,%,0,100,Relative humidity
+p_sea,pressure_hpa,hPa,920,1070,Air pressure at sea level

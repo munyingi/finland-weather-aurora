@@ -1,0 +1,158 @@
+version: 2
+
+models:
+  - name: dim_cells
+    description: H3 hexagons covering Finland. Res 5 carries weather, res 4 carries the aurora score.
+    columns:
+      - name: cell_id
+        data_tests: [unique, not_null]
+      - name: magnetic_latitude_deg
+        data_tests:
+          - accepted_range:
+              arguments: {min_value: 54, max_value: 68}
+
+  - name: dim_stations
+    description: FMI stations that have reported, with current metadata and region.
+    columns:
+      - name: station_key
+        data_tests: [unique, not_null]
+
+  - name: fct_weather_cell_hourly
+    description: Hourly weather interpolated (IDW) onto every res-5 hexagon. Incremental with a lookback for late data.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [cell_id, observed_at]
+    columns:
+      - name: cell_id
+        data_tests:
+          - not_null
+          - relationships:
+              arguments:
+                to: ref('dim_cells')
+                field: cell_id
+      - name: air_temperature_c
+        data_tests:
+          - accepted_range:
+              arguments: {min_value: -55, max_value: 40}
+      - name: wind_gust_ms
+        data_tests:
+          - accepted_range:
+              arguments: {min_value: 0, max_value: 80}
+
+  - name: fct_weather_region_daily
+    description: Daily weather per region (maakunta), Helsinki calendar day.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [region_code, local_date]
+
+  - name: fct_station_daily
+    description: Station-day metrics feeding event detection.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [station_key, local_date]
+
+  - name: fct_weather_events
+    description: Notable and extreme weather per station-day, driven by the event_thresholds seed.
+    columns:
+      - name: event_id
+        data_tests: [unique, not_null]
+      - name: severity
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [low, medium, high]
+
+  - name: fct_aurora_cell_hourly
+    description: Hourly aurora visibility score per res-4 hexagon (geomagnetic chance x darkness x clear sky).
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [cell_id, valid_at]
+    columns:
+      - name: aurora_score
+        data_tests:
+          - accepted_range:
+              arguments: {min_value: 0, max_value: 100}
+      - name: aurora_category
+        data_tests:
+          - not_null
+          - accepted_values:
+              arguments:
+                values: [excellent, good, possible, unlikely, no_data]
+
+  - name: mart_aurora_spots_hourly
+    description: Hourly aurora score at well-known viewing spots.
+    data_tests:
+      - unique_combination:
+          arguments:
+            columns: [spot_name, valid_at]
+
+  - name: mart_aurora_tonight
+    description: Ranked best viewing hour per spot for the coming night.
+    columns:
+      - name: spot_name
+        data_tests: [unique, not_null]
+
+  - name: mart_pipeline_health
+    description: Per-source freshness, failures and data quality.
+    columns:
+      - name: source
+        data_tests: [unique, not_null]
+      - name: status
+        data_tests:
+          - accepted_values:
+              arguments:
+                values: [healthy, degraded, stale, never_loaded]
+
+unit_tests:
+  - name: aurora_score_respects_darkness_cloud_and_latitude
+    description: >
+      Lapland on a clear December night scores high, Helsinki at the same Kp scores lower,
+      full cloud or daylight scores zero, and a missing Kp is flagged instead of guessed.
+    model: fct_aurora_cell_hourly
+    given:
+      - input: ref('dim_cells')
+        rows:
+          - {cell_id: kilpis, h3_res: 4, lat: 69.04, lon: 20.80, region_code: FI-10, region_name: Lapland, magnetic_latitude_deg: 66.6}
+          - {cell_id: helsinki, h3_res: 4, lat: 60.17, lon: 24.94, region_code: FI-18, region_name: Uusimaa, magnetic_latitude_deg: 57.8}
+      - input: ref('stg_openmeteo__cloud')
+        rows:
+          - {cell_id: kilpis, valid_at: "2026-12-15 22:00:00", cloud_cover_pct: 0}
+          - {cell_id: helsinki, valid_at: "2026-12-15 22:00:00", cloud_cover_pct: 0}
+          - {cell_id: kilpis, valid_at: "2026-12-15 23:00:00", cloud_cover_pct: 100}
+          - {cell_id: kilpis, valid_at: "2026-06-21 10:00:00", cloud_cover_pct: 0}
+          - {cell_id: kilpis, valid_at: "2026-12-15 21:00:00", cloud_cover_pct: 0}
+      - input: ref('int_space_weather_hourly')
+        rows:
+          - {hour_at: "2026-12-15 22:00:00", kp: 3.0, kp_status: predicted, bz_mean_nt: -2.0, speed_mean_kms: 400}
+          - {hour_at: "2026-12-15 23:00:00", kp: 3.0, kp_status: predicted, bz_mean_nt: -2.0, speed_mean_kms: 400}
+          - {hour_at: "2026-06-21 10:00:00", kp: 5.0, kp_status: observed, bz_mean_nt: -2.0, speed_mean_kms: 400}
+    expect:
+      rows:
+        - {cell_id: kilpis, valid_at: "2026-12-15 22:00:00", aurora_category: excellent}
+        - {cell_id: helsinki, valid_at: "2026-12-15 22:00:00", aurora_category: possible}
+        - {cell_id: kilpis, valid_at: "2026-12-15 23:00:00", aurora_category: unlikely}
+        - {cell_id: kilpis, valid_at: "2026-06-21 10:00:00", aurora_category: unlikely}
+        - {cell_id: kilpis, valid_at: "2026-12-15 21:00:00", aurora_category: no_data}
+
+  - name: southward_bz_boosts_effective_kp
+    model: fct_aurora_cell_hourly
+    given:
+      - input: ref('dim_cells')
+        rows:
+          - {cell_id: oulu, h3_res: 4, lat: 65.0, lon: 25.5, region_code: FI-14, region_name: Northern Ostrobothnia, magnetic_latitude_deg: 62.5}
+      - input: ref('stg_openmeteo__cloud')
+        rows:
+          - {cell_id: oulu, valid_at: "2026-12-15 22:00:00", cloud_cover_pct: 0}
+          - {cell_id: oulu, valid_at: "2026-12-15 23:00:00", cloud_cover_pct: 0}
+      - input: ref('int_space_weather_hourly')
+        rows:
+          - {hour_at: "2026-12-15 22:00:00", kp: 2.0, bz_mean_nt: 1.0, speed_mean_kms: 400}
+          - {hour_at: "2026-12-15 23:00:00", kp: 2.0, bz_mean_nt: -12.0, speed_mean_kms: 650}
+    expect:
+      rows:
+        - {cell_id: oulu, valid_at: "2026-12-15 22:00:00", kp_effective: 2.0}
+        - {cell_id: oulu, valid_at: "2026-12-15 23:00:00", kp_effective: 3.5}

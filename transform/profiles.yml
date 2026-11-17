@@ -1,0 +1,10 @@
+finland_weather_aurora:
+  target: dev
+  outputs:
+    dev:
+      type: duckdb
+      # Run dbt from the repo root (the Makefile does). Override with FWA_WAREHOUSE.
+      path: "{{ env_var('FWA_WAREHOUSE', 'data/warehouse.duckdb') }}"
+      threads: 4
+      settings:
+        TimeZone: "UTC"

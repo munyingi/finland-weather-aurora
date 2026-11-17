@@ -1,0 +1,34 @@
+version: 2
+
+sources:
+  - name: raw
+    schema: raw
+    description: Landing tables written by the Python ingestion (`ingest/`). Idempotent upserts on natural keys.
+    loaded_at_field: loaded_at
+    tables:
+      - name: fmi_observations
+        description: Hourly FMI station observations, long format (one row per station, hour, parameter).
+        config:
+          freshness:
+            warn_after: {count: 6, period: hour}
+            error_after: {count: 24, period: hour}
+      - name: fmi_stations
+        description: FMI station metadata from the fmi::ef::stations stored query.
+      - name: swpc_kp
+        description: NOAA planetary Kp index in 3-hour blocks, observed plus 3-day forecast.
+        config:
+          freshness:
+            warn_after: {count: 6, period: hour}
+            error_after: {count: 24, period: hour}
+      - name: swpc_solar_wind
+        description: Real-time solar wind at L1 (DSCOVR/ACE), 1-minute resolution.
+      - name: openmeteo_cloud
+        description: Hourly total and low cloud cover forecast per aurora grid cell.
+        config:
+          freshness:
+            warn_after: {count: 6, period: hour}
+            error_after: {count: 24, period: hour}
+      - name: grid_cells
+        description: H3 cells covering Finland (res 5 for weather, res 4 for aurora), tagged with region.
+      - name: ingest_runs
+        description: Audit log, one row per ingestion run and source.

@@ -1,0 +1,46 @@
+name: finland_weather_aurora
+version: "1.0.0"
+config-version: 2
+profile: finland_weather_aurora
+
+model-paths: ["models"]
+seed-paths: ["seeds"]
+snapshot-paths: ["snapshots"]
+macro-paths: ["macros"]
+test-paths: ["tests"]
+target-path: "target"
+clean-targets: ["target", "dbt_packages"]
+
+vars:
+  # Inverse-distance weighting (station -> hexagon interpolation)
+  idw_neighbours: 4          # nearest stations reporting the measure in that hour
+  idw_max_km: 120            # beyond this a cell is left empty instead of guessed
+  incremental_lookback_hours: 6   # re-merge recent hours so late FMI values land
+  # Aurora visibility heuristic (see README "How the aurora score works")
+  mag_pole_lat: 80.8         # geomagnetic north pole, centred dipole approximation
+  mag_pole_lon: -72.7
+  oval_base_mlat: 67.0       # equatorward oval edge at Kp 0, geomagnetic latitude
+  oval_kp_slope: 2.0         # degrees the oval moves south per Kp step
+  view_offset_deg: 2.0       # aurora is visible low on the horizon this far south of the edge
+  geo_softness_deg: 1.0      # width of the logistic transition
+  tonight_hours: 18          # look-ahead window for "tonight" marts
+
+models:
+  finland_weather_aurora:
+    staging:
+      +schema: staging
+      +materialized: view
+    intermediate:
+      +schema: intermediate
+      +materialized: table
+    marts:
+      +schema: marts
+      +materialized: table
+
+seeds:
+  finland_weather_aurora:
+    +schema: reference
+
+snapshots:
+  finland_weather_aurora:
+    +target_schema: snapshots
