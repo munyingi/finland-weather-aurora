@@ -45,8 +45,9 @@ DEFAULT_BACKFILL_HOURS = int(os.getenv("FWA_BACKFILL_HOURS", "72"))
 SWPC_BASE = os.getenv("FWA_SWPC_BASE", "https://services.swpc.noaa.gov")
 SWPC_KP_OBSERVED = f"{SWPC_BASE}/products/noaa-planetary-k-index.json"
 SWPC_KP_FORECAST = f"{SWPC_BASE}/products/noaa-planetary-k-index-forecast.json"
-SWPC_SOLAR_WIND_MAG = f"{SWPC_BASE}/products/solar-wind/mag-1-day.json"
-SWPC_SOLAR_WIND_PLASMA = f"{SWPC_BASE}/products/solar-wind/plasma-1-day.json"
+# Real-time solar wind (RTSW). Replaced the /products/solar-wind/*.json files in 2026 (NWS SCN 26-21).
+SWPC_SOLAR_WIND_MAG = f"{SWPC_BASE}/json/rtsw/rtsw_mag_1m.json"
+SWPC_SOLAR_WIND_PLASMA = f"{SWPC_BASE}/json/rtsw/rtsw_wind_1m.json"
 
 # --- Open-Meteo (cloud cover forecast for every aurora cell) ----------------
 OPENMETEO_URL = os.getenv("FWA_OPENMETEO_URL", "https://api.open-meteo.com/v1/forecast")

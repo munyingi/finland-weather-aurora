@@ -156,9 +156,9 @@ class DemoClient:
             return self._kp_observed()
         if path.endswith("noaa-planetary-k-index-forecast.json"):
             return self._kp_forecast()
-        if path.endswith("mag-1-day.json"):
+        if path.endswith("rtsw_mag_1m.json"):
             return self._solar_wind("mag")
-        if path.endswith("plasma-1-day.json"):
+        if path.endswith("rtsw_wind_1m.json"):
             return self._solar_wind("plasma")
         if url.startswith(config.OPENMETEO_URL):
             return self._openmeteo(params)
@@ -242,22 +242,44 @@ class DemoClient:
         return json.dumps(rows).encode()
 
     def _solar_wind(self, kind: str) -> bytes:
+        # RTSW key-value format: one row per spacecraft per minute, numeric values,
+        # with the backup spacecraft flagged inactive.
         start = self.now - timedelta(hours=24)
         peak = storm_peak(self.now)
-        if kind == "mag":
-            rows = [["time_tag", "bx_gsm", "by_gsm", "bz_gsm", "lon_gsm", "lat_gsm", "bt"]]
-        else:
-            rows = [["time_tag", "density", "speed", "temperature"]]
+        rows = []
         ts = start.replace(second=0, microsecond=0)
         while ts <= self.now:
             hrs_to_peak = (peak - ts).total_seconds() / 3600.0
             arriving = math.exp(-(((hrs_to_peak - 2) / 4.0) ** 2))
-            if kind == "mag":
-                bz = round(1.5 - 8.0 * arriving + 2 * (_u("bz", ts) - 0.5), 2)
-                rows.append([f"{ts:%Y-%m-%d %H:%M:%S.000}", "1.1", "-2.0", f"{bz}", "120", "-30", f"{abs(bz) + 3:.2f}"])
-            else:
-                speed = round(410 + 150 * arriving + 15 * (_u("v", ts) - 0.5), 1)
-                rows.append([f"{ts:%Y-%m-%d %H:%M:%S.000}", "6.1", f"{speed}", "150000"])
+            for source, active in (("DSCOVR", True), ("ACE", False)):
+                tag = f"{ts:%Y-%m-%dT%H:%M:%S}"
+                if kind == "mag":
+                    bz = round(1.5 - 8.0 * arriving + 2 * (_u("bz", ts) - 0.5), 2) if active else 99.0
+                    rows.append(
+                        {
+                            "time_tag": tag,
+                            "active": active,
+                            "source": source,
+                            "bx_gsm": 1.1,
+                            "by_gsm": -2.0,
+                            "bz_gsm": bz,
+                            "bt": round(abs(bz) + 3, 2),
+                            "phi_gsm": 120.0,
+                            "theta_gsm": -30.0,
+                        }
+                    )
+                else:
+                    speed = round(410 + 150 * arriving + 15 * (_u("v", ts) - 0.5), 1) if active else 9999.0
+                    rows.append(
+                        {
+                            "time_tag": tag,
+                            "active": active,
+                            "source": source,
+                            "proton_speed": speed,
+                            "proton_density": 6.1,
+                            "proton_temperature": 150000.0,
+                        }
+                    )
             ts += timedelta(minutes=1)
         return json.dumps(rows).encode()
 

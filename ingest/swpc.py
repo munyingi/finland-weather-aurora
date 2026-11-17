@@ -57,20 +57,31 @@ def parse_kp(payload: bytes, product: str) -> list[dict]:
     return rows
 
 
+def _active_rows(payload: bytes) -> list[dict]:
+    """RTSW files can list several spacecraft per minute; keep the one forecasters mark active."""
+    rows = [r for r in parse_table(payload) if r.get("time_tag") is not None]
+    if any("active" in r for r in rows):
+        rows = [r for r in rows if r.get("active") in (True, "true", "True", 1)]
+    return rows
+
+
 def parse_solar_wind(mag_payload: bytes, plasma_payload: bytes) -> list[dict]:
+    """Merge magnetometer and plasma minutes. Accepts both the RTSW field names
+    (proton_speed, proton_density) and the retired product names (speed, density)."""
     merged: dict[datetime, dict] = {}
-    for r in parse_table(mag_payload):
-        if r.get("time_tag") is None:
-            continue
+    for r in _active_rows(mag_payload):
         t = _parse_time(r["time_tag"])
         merged.setdefault(t, {"observed_at": t})
         merged[t].update({"bz_gsm_nt": _to_float(r.get("bz_gsm")), "bt_nt": _to_float(r.get("bt"))})
-    for r in parse_table(plasma_payload):
-        if r.get("time_tag") is None:
-            continue
+    for r in _active_rows(plasma_payload):
         t = _parse_time(r["time_tag"])
         merged.setdefault(t, {"observed_at": t})
-        merged[t].update({"speed_kms": _to_float(r.get("speed")), "density_cm3": _to_float(r.get("density"))})
+        merged[t].update(
+            {
+                "speed_kms": _to_float(r.get("proton_speed", r.get("speed"))),
+                "density_cm3": _to_float(r.get("proton_density", r.get("density"))),
+            }
+        )
     cols = ("observed_at", "bz_gsm_nt", "bt_nt", "speed_kms", "density_cm3")
     return [{c: row.get(c) for c in cols} for row in sorted(merged.values(), key=lambda x: x["observed_at"])]
 

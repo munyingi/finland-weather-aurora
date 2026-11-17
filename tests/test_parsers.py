@@ -74,6 +74,21 @@ def test_swpc_kp_accepts_both_shapes(payload):
     ]
 
 
+def test_swpc_rtsw_keeps_only_the_active_spacecraft():
+    mag = json.dumps(
+        [
+            {"time_tag": "2026-11-17T18:01:00", "active": True, "source": "DSCOVR", "bz_gsm": -7.5, "bt": 9.0},
+            {"time_tag": "2026-11-17T18:01:00", "active": False, "source": "ACE", "bz_gsm": 3.0, "bt": 4.0},
+        ]
+    ).encode()
+    plasma = json.dumps(
+        [{"time_tag": "2026-11-17T18:01:00", "active": True, "source": "DSCOVR", "proton_speed": 612.3, "proton_density": 5.1}]
+    ).encode()
+    assert swpc.parse_solar_wind(mag, plasma) == [
+        {"observed_at": datetime(2026, 11, 17, 18, 1), "bz_gsm_nt": -7.5, "bt_nt": 9.0, "speed_kms": 612.3, "density_cm3": 5.1}
+    ]
+
+
 def test_swpc_solar_wind_merges_mag_and_plasma():
     mag = json.dumps([["time_tag", "bz_gsm", "bt"], ["2026-11-17 18:01:00.000", "-7.5", "9.0"]]).encode()
     plasma = json.dumps(

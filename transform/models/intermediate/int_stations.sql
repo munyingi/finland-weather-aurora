@@ -18,6 +18,31 @@ meta as (
     where dbt_valid_to is null
 ),
 
+-- Observation and metadata coordinates usually match exactly; when FMI rounds
+-- them differently, fall back to the nearest station within 1 km.
+meta_match as (
+    select
+        p.position_key,
+        m.fmisid,
+        {{ haversine_km('p.lat', 'p.lon', 'm.lat', 'm.lon') }} as match_km,
+        p.position_key = m.position_key as exact_match
+    from positions as p
+    inner join meta as m
+        on abs(p.lat - m.lat) < 0.01 and abs(p.lon - m.lon) < 0.02
+    qualify row_number() over (
+        partition by p.position_key order by (p.position_key = m.position_key) desc, match_km
+    ) = 1
+),
+
+matched as (
+    select mm.position_key, m.*
+    exclude (position_key)
+    from meta_match as mm
+    inner join meta as m using (fmisid)
+    where mm.match_km <= 1.0
+    qualify row_number() over (partition by m.fmisid order by mm.exact_match desc, mm.match_km) = 1
+),
+
 cells as (
     select cell_id, lat, lon, region_code, region_name
     from {{ ref('stg_grid__cells') }}
@@ -52,5 +77,5 @@ select
     p.measures_reported,
     m.fmisid is not null as has_metadata
 from positions as p
-left join meta as m using (position_key)
+left join matched as m using (position_key)
 left join nearest_cell as n using (position_key)
