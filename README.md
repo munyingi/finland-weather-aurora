@@ -12,9 +12,20 @@ A scheduled GitHub Actions job runs the pipeline every 3 hours. A Streamlit dash
 
 **Live dashboard:** [finland-weather-aurora.streamlit.app](https://finland-weather-aurora.streamlit.app)
 
-![Aurora score and interpolated temperature, demo snapshot](docs/images/demo-preview.png)
+![Aurora map and where to go tonight](docs/images/dashboard-aurora.jpg)
 
-*Demo snapshot rendered from synthetic data. Live dashboard screenshots go in `docs/images/`.*
+*Live dashboard, 17 Nov 2026 at 22:00 Helsinki time: Kp 4.7 with clear gaps over Kilpisjärvi and Utsjoki, cloud over the rest of Finland.*
+
+<table>
+  <tr>
+    <td><img src="docs/images/dashboard-weather.jpg" alt="Interpolated temperature on the H3 grid"/><br/><sub>Temperature from 191 FMI stations interpolated onto 1,770 hexagons</sub></td>
+    <td><img src="docs/images/dashboard-kp-forecast.jpg" alt="Kp history and NOAA forecast, spot comparison"/><br/><sub>Kp observed, estimated and forecast, plus hourly score per spot</sub></td>
+  </tr>
+  <tr>
+    <td><img src="docs/images/dashboard-extreme-weather.jpg" alt="Extreme weather events"/><br/><sub>Extreme weather detected from station readings</sub></td>
+    <td><img src="docs/images/dashboard-pipeline-health.jpg" alt="Pipeline health"/><br/><sub>Pipeline health: per-source freshness, failures and quality</sub></td>
+  </tr>
+</table>
 
 ---
 
@@ -137,6 +148,8 @@ make live     # real data from FMI, NOAA SWPC and Open-Meteo
 make app      # dashboard at http://localhost:8501
 make test     # pytest
 ```
+
+![Demo snapshot](docs/images/demo-preview.png)
 
 `make demo` needs no network. `DemoClient` serves synthetic payloads in the exact FMI WFS XML, SWPC JSON and Open-Meteo JSON formats. They flow through the real parsers, loaders and dbt models, which is what CI runs on every push. The demo scenario is a cold, clear night in Lapland, a front over the south coast and a storm near Kp 4.
 
