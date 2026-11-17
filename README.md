@@ -10,7 +10,7 @@ A geospatial data engineering pipeline for **all of Finland**. It does two thing
 
 A scheduled GitHub Actions job runs the pipeline every 3 hours. A Streamlit dashboard reads the published output.
 
-**Live dashboard:** _add your Streamlit URL here after deploying_
+**Live dashboard:** [finland-weather-aurora.streamlit.app](https://finland-weather-aurora.streamlit.app)
 
 ![Aurora score and interpolated temperature, demo snapshot](docs/images/demo-preview.png)
 
