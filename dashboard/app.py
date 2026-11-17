@@ -166,8 +166,8 @@ if source != "live" or manifest.get("mode") == "demo":
         icon="🧪",
     )
 
-tab_aurora, tab_weather, tab_regions, tab_events, tab_health = st.tabs(
-    ["🌌 Aurora", "🌡️ Weather", "📊 Regions", "⚠️ Extreme weather", "🩺 Pipeline health"]
+tab_aurora, tab_weather, tab_regions, tab_events, tab_health, tab_about = st.tabs(
+    ["🌌 Aurora", "🌡️ Weather", "📊 Regions", "⚠️ Extreme weather", "🩺 Pipeline health", "ℹ️ About"]
 )
 
 # --------------------------------------------------------------------------- aurora
@@ -425,6 +425,72 @@ with tab_health:
     st.dataframe(h, hide_index=True, width="stretch")
     st.json(manifest)
     st.caption(f"Data source: {source} ({_data_url() if source == 'live' else 'dashboard/demo_data'})")
+
+# --------------------------------------------------------------------------- about
+with tab_about:
+    left, right = st.columns([3, 2], gap="large")
+    with left:
+        st.header("About this project")
+        st.markdown(
+            """
+A geospatial data engineering portfolio project covering **all of Finland**, from Hanko to Utsjoki and Åland.
+
+**What it answers**
+- What is the weather right now, everywhere in Finland, not only where a station stands?
+- Which regions had frost, storms, heavy rain or snow in the last 30 days?
+- **Where should I go tonight to see the northern lights**, and at what time?
+
+**How it works**
+1. **Ingest (Python).** Every 3 hours GitHub Actions pulls hourly observations from about 190 FMI weather
+   stations, the NOAA Kp index and real-time solar wind, and an Open-Meteo cloud forecast for every aurora cell.
+   Loads are idempotent and incremental, and one failing source never stops the others.
+2. **Model (dbt on DuckDB).** Stations are interpolated onto ~1,770 H3 hexagons with inverse distance
+   weighting, rolled up to the 19 regions, and checked against extreme-weather rules. Station metadata
+   is kept as SCD Type 2 history.
+3. **Score the aurora.** Each hexagon gets a 0 to 100 score per hour:
+   geomagnetic chance (Kp, solar wind, geomagnetic latitude) × darkness (sun position) × clear sky (cloud cover).
+4. **Serve.** Small Parquet files are published to a `data` branch and read by this Streamlit app.
+
+**Quality built in:** 47 dbt data tests, 2 dbt unit tests, source freshness checks, 17 pytest tests,
+an offline demo mode that runs the full pipeline in CI, and the Pipeline health tab.
+"""
+        )
+    with right:
+        st.subheader("Stack")
+        st.markdown(
+            """
+| Layer | Tools |
+|---|---|
+| Ingestion | Python, requests, H3, Shapely |
+| Warehouse | DuckDB |
+| Transformation | dbt (incremental, snapshots, unit tests) |
+| Orchestration | GitHub Actions (every 3 h) |
+| Serving | Parquet, Streamlit, pydeck, Altair |
+"""
+        )
+        st.subheader("Data sources")
+        st.markdown(
+            """
+- [Finnish Meteorological Institute open data](https://en.ilmatieteenlaitos.fi/open-data) (CC BY 4.0)
+- [NOAA Space Weather Prediction Center](https://www.swpc.noaa.gov/)
+- [Open-Meteo](https://open-meteo.com/) (CC BY 4.0)
+- [Natural Earth](https://www.naturalearthdata.com/) region boundaries
+"""
+        )
+        st.subheader("Author")
+        st.markdown(
+            """
+**Samwel Munyingi**, Helsinki, Finland.
+
+[GitHub](https://github.com/munyingi) · [LinkedIn](https://linkedin.com/in/samwel-munyingi-352a88161) ·
+[Source code](https://github.com/munyingi/finland-weather-aurora)
+"""
+        )
+        st.info(
+            "The aurora score is a transparent rule of thumb for this project, not an official forecast. "
+            "For alerts, use FMI's Revontulet ja avaruussää service.",
+            icon="ℹ️",
+        )
 
 st.divider()
 st.caption(
