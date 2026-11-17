@@ -76,6 +76,17 @@ jobs:
           gh cache list --key warehouse- --sort created_at --order desc --limit 100 --json id --jq '.[2:][].id' \
             | xargs -r -n1 gh cache delete || true
 
+      # GitHub pauses scheduled workflows after 60 days without repo activity.
+      # Re-enabling the workflow through the API resets that timer, so do it weekly.
+      - name: Keep the schedule alive
+        if: always() && github.event_name == 'schedule'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          if [ "$(date -u +%u)" = "1" ] && [ "$(date -u +%H)" -lt "3" ]; then
+            gh api -X PUT "repos/${GITHUB_REPOSITORY}/actions/workflows/pipeline.yml/enable" && echo "Schedule refreshed"
+          fi
+
       # Force-push a single-commit `data` branch so the history never grows.
       - name: Publish to data branch
         env:
