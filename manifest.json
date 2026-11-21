@@ -1,0 +1,15 @@
+{
+  "generated_at_utc": "2026-11-21T19:28:33",
+  "mode": "live",
+  "row_counts": {
+    "aurora_cells": 17873,
+    "aurora_tonight": 23,
+    "aurora_spots_hourly": 1403,
+    "space_weather_hourly": 169,
+    "weather_cells": 84960,
+    "region_daily": 152,
+    "weather_events": 332,
+    "stations": 191,
+    "pipeline_health": 6
+  }
+}
